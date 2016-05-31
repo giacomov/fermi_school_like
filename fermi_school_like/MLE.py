@@ -4,13 +4,14 @@ from data_generative_process import DataGenerativeProcess
 
 class Likelihood(object):
 
-    def __init__(self, x, data, model):
+    def __init__(self, x, data, model, noise_model):
 
         self._x = x
         self._data = data
         self._model = model
         self._original_parameters = self._model.current_parameters
         self._noise_model = None
+        self._set_noise_model(noise_model)
 
         assert np.all( (self._data >= 0) ), "Data must be >= 0"
 
@@ -34,6 +35,24 @@ class Likelihood(object):
 
     noise_model = property(_get_noise_model, _set_noise_model, doc='''Sets or gets the noise model''')
 
+    def profile(self, grid, par_id=0):
+
+        log_like = []
+
+        if self.noise_model == 'poisson':
+
+            likelihood = self._poisson_like
+
+        else:
+
+            likelihood = self._gaussian_like
+
+        for parameter in grid:
+
+            log_like.append(likelihood([parameter]))
+
+        return np.array(log_like)
+
     def _poisson_like(self, parameters):
 
         prediction = self._model.evaluate(self._x, parameters)
@@ -44,9 +63,13 @@ class Likelihood(object):
 
         prediction = self._model.evaluate(self._x, parameters)
 
-        variances = np.sqrt(self._data)
+        idx = self._data > 0
 
-        chisq = np.sum( (self._data - prediction)**2 / variances**2 )
+        clip_data = self._data[idx]
+
+        variances = np.sqrt(clip_data)
+
+        chisq = np.sum( (clip_data - prediction[idx])**2 / variances**2 )
 
         return -0.5 * chisq
 
@@ -66,11 +89,13 @@ class Likelihood(object):
         # Initial value: use the current value for the parameters
         initial_values = self._model.current_parameters
 
-        res = scipy.optimize.minimize(minus_log_like, initial_values)
+        bounds = self._model.bounds
+
+        res = scipy.optimize.minimize(minus_log_like, initial_values, bounds=bounds)
 
         return res.x
 
-    def generate_and_fit(self, n_iter):
+    def generate_and_fit(self, data_generative_process, n_iter):
         """
         Generate data and fit them for the specified number of times
 
@@ -89,11 +114,9 @@ class Likelihood(object):
             # Set back to initial parameters
             self._model.current_parameters = self._original_parameters
 
-            data = DataGenerativeProcess(self._model).generate(self._x)
+            data = data_generative_process.generate(self._x)
 
-            this_like = Likelihood(self._x, data, self._model)
-
-            this_like.noise_model = self.noise_model
+            this_like = Likelihood(self._x, data, self._model, self._noise_model)
 
             this_results = this_like.maximize()
 

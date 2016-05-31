@@ -18,14 +18,18 @@ class Constant(object):
     current_parameters = property(_get_current_parameters, _set_current_parameters,
                                   doc='Sets or gets current parameters')
 
+    @property
+    def bounds(self):
+        return ((1e-3, None),)
+
     def __call__(self, x):
 
-        results = np.zeros_like(x) + self._a
+        results = np.zeros_like(x) + self._a + 1e-20
 
         return results
 
     def evaluate(self, x, parameters):
-        assert len(parameters) == 2, "Wrong number of parameters"
+        assert len(parameters) == 1, "Wrong number of parameters"
 
         a = parameters
 
@@ -49,6 +53,11 @@ class Line(object):
     def b(self):
 
         return self._b
+
+    @property
+    def bounds(self):
+
+        return (1e-3, None), (None, None)
 
     def _get_current_parameters(self):
 
