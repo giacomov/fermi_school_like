@@ -1,4 +1,5 @@
 import numpy as np
+from bins import Bins
 
 class DataGenerativeProcess(object):
     """
@@ -15,17 +16,17 @@ class DataGenerativeProcess(object):
 
         self._function = function
 
-    def generate(self, xs):
+    def generate(self, bins):
         """
-        Generate n_bins of data between minimum and maximum
+        Generate data in the bins defined by xs
 
-        :param minimum: minimum for the generation
-        :param maximum: maximum for the generation
-        :param n_bins: number of bins to generate
+        :param bins : a Bins instance
         :return: a vector of data
         """
 
-        predictions = self._function(xs)
+        assert isinstance(bins, Bins)
+
+        predictions = self._function.integral(bins.starts, bins.stops)
 
         data = np.random.poisson(predictions)
 

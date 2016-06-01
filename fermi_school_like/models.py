@@ -3,6 +3,7 @@ import numpy as np
 class Constant(object):
 
     def __init__(self, a):
+
         self._a = a
 
     @property
@@ -24,7 +25,10 @@ class Constant(object):
 
     def __call__(self, x):
 
-        results = np.zeros_like(x) + self._a + 1e-20
+        # The 1e-20 is to avoid the results to be exactly 0, which would cause problems
+        # in the log-likelihood call because of the logarithm of M
+
+        results = np.zeros_like(x) + self._a
 
         return results
 
@@ -37,50 +41,10 @@ class Constant(object):
 
         return self.__call__(x)
 
-class Line(object):
+    def integral(self, lower_bounds, upper_bounds, parameters=None):
 
-    def __init__(self, a, b):
+        if parameters:
 
-        self._a = a
-        self._b = b
+            self._a = parameters
 
-    @property
-    def a(self):
-
-        return self._a
-
-    @property
-    def b(self):
-
-        return self._b
-
-    @property
-    def bounds(self):
-
-        return (1e-3, None), (None, None)
-
-    def _get_current_parameters(self):
-
-        return list([self._a, self._b])
-
-    def _set_current_parameters(self, new_parameters):
-
-        self._a, self._b = new_parameters
-
-    current_parameters = property(_get_current_parameters, _set_current_parameters,
-                                  doc='Sets or gets current parameters')
-
-    def __call__(self, x):
-
-        return np.maximum(self._a * x + self._b, 1e-20)
-
-    def evaluate(self, x, parameters):
-
-        assert len(parameters) == 2, "Wrong number of parameters"
-
-        a, b = parameters
-
-        self._a = a
-        self._b = b
-
-        return self.__call__(x)
+        return self._a * (upper_bounds - lower_bounds)
